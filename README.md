@@ -84,7 +84,7 @@
       <br /><br />
       <b>📌 Research Topic</b>
       <br />
-      <sub>이준호 연구 주제<br/>(한 줄 부제)</sub>
+      <sub>Dual-Path Aerial Adpater(DPAA) <br/>for Aerial Visual Grounding</sub>
       <br /><br />
       <a href="https://github.com/leejunho/their-repo">📂 Repository</a>
     </td>
