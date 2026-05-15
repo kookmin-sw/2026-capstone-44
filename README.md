@@ -39,13 +39,13 @@
 
 ### 3. 팀 소개
 
-## 👥 Team Members & Individual Research
+## 👥 Team Members & Individual Research 👥
 
 <table>
   <tr>
     <td align="center" width="25%">
-      <a href="https://github.com/byunsuyang">
-        <img src="https://github.com/byunsuyang.png" width="130px;" style="border-radius:50%"/>
+      <a href="https://github.com/suyamg">
+        <img src="https://github.com/suyamg.png" width="130px;" style="border-radius:50%"/>
         <br /><br />
         <b>변수양</b>
       </a>
