@@ -95,7 +95,7 @@
         <b>이하리</b>
       </a>
       <br />
-      <sub>🎓 인공지능학부</sub>
+      <sub>🎓 산림환경시스템학과</sub>
       <br /><br />
       <b>📌 Research Topic</b>
       <br />
