@@ -72,8 +72,8 @@
       <br /><br />
     </td>
     <td align="center" width="25%">
-      <a href="https://github.com/leejunho">
-        <img src="https://github.com/leejunho.png" width="130px;" style="border-radius:50%"/>
+      <a href="https://github.com/JOONHOGITHUB">
+        <img src="https://github.com/JOONHOGITHUB.png" width="130px;" style="border-radius:50%"/>
         <br /><br />
         <b>이준호</b>
       </a>
