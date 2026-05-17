@@ -122,7 +122,7 @@
         <b>조영채</b>
       </a>
       <br />
-      <sub>🎓 인공지능학부</sub>
+      <sub>🎓 소프트웨어학부</sub>
       <br /><br />
       <b>Research Topic</b>
       <br />
@@ -136,7 +136,7 @@
         <b>최정환</b>
       </a>
       <br />
-      <sub>🎓 인공지능학부</sub>
+      <sub>🎓 소프트웨어학부</sub>
       <br /><br />
       <b>Research Topic</b>
       <br />
