@@ -54,7 +54,7 @@
       <br /><br />
       <b>Research Topic</b>
       <br />
-      <sub>LoRA + Spatial Reasoning<br/>for Aerial Visual Grounding</sub>
+      <sub>LoRA + Spatial Reasoning </sub>
       <br /><br />
     </td>
     <td align="center" width="25%">
@@ -82,7 +82,7 @@
       <br /><br />
       <b>Research Topic</b>
       <br />
-      <sub>Dual-Path Aerial Adpater(DPAA) <br/>for Aerial Visual Grounding</sub>
+      <sub>Dual-Path Aerial Adpater(DPAA)</sub>
       <br /><br />
     </td>
     <td align="center" width="25%">
