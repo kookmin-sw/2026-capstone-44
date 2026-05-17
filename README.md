@@ -59,7 +59,7 @@
       <a href="https://github.com/byunsuyang/your-repo">📂 Repository</a>
     </td>
     <td align="center" width="25%">
-      <a href="https://github.com/ahnsubin">
+      <a href="https://github.com/dks0101">
         <img src="https://github.com/ahnsubin.png" width="130px;" style="border-radius:50%"/>
         <br /><br />
         <b>안수빈</b>
@@ -69,7 +69,7 @@
       <br /><br />
       <b>📌 Research Topic</b>
       <br />
-      <sub>안수빈 연구 주제<br/>(한 줄 부제)</sub>
+      <sub>RoPE adding</sub>
       <br /><br />
       <a href="https://github.com/ahnsubin/their-repo">📂 Repository</a>
     </td>
