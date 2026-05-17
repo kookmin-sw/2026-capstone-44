@@ -39,7 +39,7 @@
 
 ### 3. 팀 소개
 
-## 👥 Team Members & Individual Research 👥
+## 👥 Members 👥
 
 <table>
   <tr>
