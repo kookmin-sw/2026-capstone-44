@@ -52,7 +52,7 @@
       <br />
       <sub>🎓 인공지능학부</sub>
       <br /><br />
-      <b>📌 Research Topic</b>
+      <b>Research Topic</b>
       <br />
       <sub>LoRA + Spatial Reasoning<br/>for Aerial Visual Grounding</sub>
       <br /><br />
@@ -66,7 +66,7 @@
       <br />
       <sub>🎓 인공지능학부</sub>
       <br /><br />
-      <b>📌 Research Topic</b>
+      <b>Research Topic</b>
       <br />
       <sub>RoPE adding</sub>
       <br /><br />
@@ -80,7 +80,7 @@
       <br />
       <sub>🎓 인공지능학부</sub>
       <br /><br />
-      <b>📌 Research Topic</b>
+      <b>Research Topic</b>
       <br />
       <sub>Dual-Path Aerial Adpater(DPAA) <br/>for Aerial Visual Grounding</sub>
       <br /><br />
@@ -94,7 +94,7 @@
       <br />
       <sub>🎓 산림환경시스템학과</sub>
       <br /><br />
-      <b>📌 Research Topic</b>
+      <b>Research Topic</b>
       <br />
       <sub>이하리 연구 주제<br/>(한 줄 부제)</sub>
       <br /><br />
@@ -110,7 +110,7 @@
       <br />
       <sub>🎓 인공지능학부</sub>
       <br /><br />
-      <b>📌 Research Topic</b>
+      <b>Research Topic</b>
       <br />
       <sub>조시현 연구 주제<br/>(한 줄 부제)</sub>
       <br /><br />
@@ -124,7 +124,7 @@
       <br />
       <sub>🎓 인공지능학부</sub>
       <br /><br />
-      <b>📌 Research Topic</b>
+      <b>Research Topic</b>
       <br />
       <sub>조영채 연구 주제<br/>(한 줄 부제)</sub>
       <br /><br />
@@ -138,7 +138,7 @@
       <br />
       <sub>🎓 인공지능학부</sub>
       <br /><br />
-      <b>📌 Research Topic</b>
+      <b>Research Topic</b>
       <br />
       <sub>최정환 연구 주제<br/>(한 줄 부제)</sub>
       <br /><br />
