@@ -56,7 +56,6 @@
       <br />
       <sub>LoRA + Spatial Reasoning<br/>for Aerial Visual Grounding</sub>
       <br /><br />
-      <a href="https://github.com/byunsuyang/your-repo">📂 Repository</a>
     </td>
     <td align="center" width="25%">
       <a href="https://github.com/dks0101">
@@ -71,7 +70,6 @@
       <br />
       <sub>RoPE adding</sub>
       <br /><br />
-      <a href="https://github.com/ahnsubin/their-repo">📂 Repository</a>
     </td>
     <td align="center" width="25%">
       <a href="https://github.com/leejunho">
@@ -86,7 +84,6 @@
       <br />
       <sub>Dual-Path Aerial Adpater(DPAA) <br/>for Aerial Visual Grounding</sub>
       <br /><br />
-      <a href="https://github.com/leejunho/their-repo">📂 Repository</a>
     </td>
     <td align="center" width="25%">
       <a href="https://github.com/leehari">
@@ -101,7 +98,6 @@
       <br />
       <sub>이하리 연구 주제<br/>(한 줄 부제)</sub>
       <br /><br />
-      <a href="https://github.com/leehari/their-repo">📂 Repository</a>
     </td>
   </tr>
   <tr>
@@ -118,7 +114,6 @@
       <br />
       <sub>조시현 연구 주제<br/>(한 줄 부제)</sub>
       <br /><br />
-      <a href="https://github.com/chosihyun/their-repo">📂 Repository</a>
     </td>
     <td align="center" width="25%">
       <a href="https://github.com/choyoungchae">
@@ -133,7 +128,6 @@
       <br />
       <sub>조영채 연구 주제<br/>(한 줄 부제)</sub>
       <br /><br />
-      <a href="https://github.com/choyoungchae/their-repo">📂 Repository</a>
     </td>
     <td align="center" width="25%">
       <a href="https://github.com/choijunghwan">
@@ -148,7 +142,6 @@
       <br />
       <sub>최정환 연구 주제<br/>(한 줄 부제)</sub>
       <br /><br />
-      <a href="https://github.com/choijunghwan/their-repo">📂 Repository</a>
     </td>
     <td align="center" width="25%">
       <!-- 빈 칸 (4명 중 1자리) -->
