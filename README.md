@@ -103,7 +103,7 @@
   <tr>
     <td align="center" width="25%">
       <a href="https://github.com/sihaun">
-        <img src="https://github.com/sihaun" width="130px;" style="border-radius:50%"/>
+        <img src="https://github.com/sihaun.png" width="130px;" style="border-radius:50%"/>
         <br /><br />
         <b>조시현</b>
       </a>
