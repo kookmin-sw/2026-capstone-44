@@ -5,7 +5,6 @@
 ## 레포 구조
 
 - `aerialvg/`: AerialVG baseline 학습/평가 패키지
-- `method4/`: frozen AerialVG detector 위에 method4 role evidence module을 붙인 실험
 - `method6/`: frozen AerialVG detector 위에 method6 role evidence module을 붙인 실험과 auxiliary 진단 코드
 - `groundingdino/`: 공통 GroundingDINO 유틸리티와 CUDA extension 소스
 - `capstone/`: AerialVG 로컬 데이터셋 로더, checkpoint 유틸, 다운로드/검증 코드
@@ -44,8 +43,6 @@ bash download_aerialvg.sh
 ```text
 checkpoints/
   aerialvg/aerialvg.pth
-  method4/outputs/run/best.pt
-  method4/outputs/run/latest.pt
   method6/outputs/run/best.pt
   method6/outputs/run/latest.pt
 ```
@@ -82,14 +79,12 @@ bash infer_aerialvg.sh
 Method 실험 평가:
 
 ```bash
-bash infer_method4.sh
 bash infer_method6.sh
 ```
 
 기본 checkpoint 선택 경로:
 
 - `infer_aerialvg.sh`: `./checkpoints/aerialvg/aerialvg.pth`
-- `infer_method4.sh`: `./checkpoints/method4/outputs/run/best.pt`
 - `infer_method6.sh`: `./checkpoints/method6/outputs/run/best.pt`
 
 추가 인자는 내부 Python module로 그대로 전달됩니다.
@@ -109,7 +104,6 @@ bash train_aerialvg.sh
 Method 실험 학습:
 
 ```bash
-bash train_method4.sh
 bash train_method6.sh
 ```
 
@@ -142,6 +136,5 @@ find aerialvg method4 method6 capstone groundingdino -type f -name '*.py' -print
 
 ```bash
 python3 -m aerialvg.eval --help
-python3 -m method4.eval --help
 python3 -m method6.eval --help
 ```
