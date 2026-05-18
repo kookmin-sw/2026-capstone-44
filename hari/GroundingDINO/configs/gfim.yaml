@@ -1,0 +1,68 @@
+# GroundingDINO AerialVG fine-tuning config
+
+# CUDA_VISIBLE_DEVICES=0 torchrun --nproc_per_node=1 train.py --config configs/aerial_vg.yaml --resume weights/gdinot-1.8m-odvg.pth
+
+# ── Reproducibility ──────────────────────────────────
+seed: 42  # 재현성을 위한 random seed 고정
+
+# ── Model ────────────────────────────────────────────
+config_file: groundingdino/config/GroundingDINO_SwinT_OGC.py
+pretrained_checkpoint: "weights/gdinot-1.8m-odvg.pth"
+
+# ── Data ─────────────────────────────────────────────
+image_dir: /data2/huggingface/AerialVG/images
+annotation_dir: /data2/huggingface/AerialVG/annotation
+max_text_len: 256
+
+# ── Training ─────────────────────────────────────────
+batch_size: 8        
+num_workers: 4
+epochs: 30
+lr: 3.0e-5         
+lr_backbone: 3.0e-6
+lr_bbox_embed: 1.0e-4
+lr_linear_proj_mult: 1.0e-5
+lr_linear_proj_names:
+  - ref_point_head
+  - sampling_offsets
+
+# gate_only(내가 추가한 모듈)에서 사용하는 lr
+lr_fixed: 5.0e-5
+lr_fixed_names:
+  - gate_w
+  - p3_down_convs
+  
+# ── Freeze 설정 ──────────────────────────────────────
+# freeze_mode 옵션:
+#   "none"      -> 전부 학습
+#   "gate_only" -> gate_w1, gate_w2만 학습, 나머지 전부 freeze
+#   "bert"      -> BERT text encoder만 freeze (논문 baseline 설정)
+
+freeze_mode: gate_only
+weight_decay: 1.0e-5
+lr_drop_list: [10]     # epoch 10까지 main lr 유지, 그 후 1/10
+clip_max_norm: 0.1
+
+# ── Hungarian Matcher (cost) ────────────────────────
+set_cost_class: 1.0
+set_cost_bbox: 5.0
+set_cost_giou: 2.0
+
+# ── Loss ─────────────────────────────────────────────
+cls_loss_coef: 2.0
+bbox_loss_coef: 5.0
+giou_loss_coef: 2.0
+focal_alpha: 0.25
+focal_gamma: 2.0
+
+# ── Output ───────────────────────────────────────────
+output_dir: /data2/2026_capstone/iiharii/outputs/.
+save_freq: 1           # 매 epoch마다 checkpoint 저장(안 지워지고 쌓임)
+save_every_steps: 1000  # 매 1000 step마다 checkpoint 저장(새 1000 step 되면 이전 거 지움)
+
+# ── Logging ──────────────────────────────────────────
+use_wandb: False
+wandb_project: groundingdino-aerial
+run_name: aerial_vg_swinT
+log_every_steps: 1000   
+acc_eval_freq: 1      # compute top-1/top-5 accuracy every N epochs
