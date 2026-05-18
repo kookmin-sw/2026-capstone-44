@@ -86,8 +86,8 @@
       <br /><br />
     </td>
     <td align="center" width="25%">
-      <a href="https://github.com/leehari">
-        <img src="https://github.com/leehari.png" width="130px;" style="border-radius:50%"/>
+      <a href="https://github.com/iiharii">
+        <img src="https://github.com/iiharii.png" width="130px;" style="border-radius:50%"/>
         <br /><br />
         <b>이하리</b>
       </a>
