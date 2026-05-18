@@ -96,7 +96,7 @@
       <br /><br />
       <b>Research Topic</b>
       <br />
-      <sub>이하리 연구 주제<br/>(한 줄 부제)</sub>
+      <sub>Gated Feature Injection Module(GFIM)</sub>
       <br /><br />
     </td>
   </tr>
