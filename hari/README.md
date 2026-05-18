@@ -1,5 +1,6 @@
 # GFIM: Gated Feature Injection for Aerial Visual Grounding
 
+
 ## Overview
 
 본 연구는 드론/항공 이미지 기반 Visual Grounding의 성능 개선을 목표로 한다.
@@ -17,17 +18,20 @@ GFIM은:
 
 구조를 통해 spatial detail 정보를 선택적으로 보강한다.
 
+
 ## Motivation
 
 - Swin Transformer는 stage가 깊어질수록 spatial resolution 감소
 - High-level feature에서 small object detail 손실 발생
 - Low-level feature(P3)에는 상대적으로 spatial information이 유지됨
 
+
 ## Method
 
 본 연구는 backbone의 P3 feature를
 각 feature scale(P4/P5/P6)에 맞게 변환한 뒤,
 Adaptive Gate를 통해 필요한 정보만 선택적으로 fusion한다.
+
 
 ## Architecture
 
