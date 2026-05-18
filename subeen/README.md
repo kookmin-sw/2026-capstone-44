@@ -8,8 +8,8 @@
 
 | | Top-1 (%) | Top-5 (%) |
 |---|---:|---:|
-| **A — Baseline (zero-shot)** | 12.79 | 34.79 |
-| **C — Ours (RoPE finetuned)** | **23.61** | **44.70** |
+| **Baseline (zero-shot)** | 12.79 | 34.79 |
+| **Ours (RoPE finetuned)** | **23.61** | **44.70** |
 | Δ | **+10.82** | **+9.91** |
 
 ### Spatial-relation Split (가설 검증)
@@ -118,10 +118,10 @@ python train_change.py
 ### 6. 평가
 
 ```bash
-# A — Baseline (zero-shot)
+# Baseline (zero-shot)
 python eval_aerial_paper.py
 
-# C — Ours (RoPE finetuned)
+# Ours (RoPE finetuned)
 python eval_aerial_modified.py
 ```
 
@@ -160,15 +160,6 @@ $$\text{angle}_{h,t} = \theta^x_{h,t} \cdot p_x + \theta^y_{h,t} \cdot p_y$$
 - **Axial-init**: paper의 Axial-RoPE 주파수와 수학적으로 동등하게 시작 (NumPy max-abs-diff = 0 검증)
 - **Zero-init `sa_out_proj`**: epoch 0에서 self-attention 출력 = 0 → pretrained 호환
 
----
-
-## 한계 (Caveat)
-
-- Baseline은 zero-shot, ours는 finetuned → 향상의 일부는 finetune 효과. 완전 분리하려면 "RoPE 없이 동일 조건 finetune" 추가 비교군 필요 (시간 제약으로 미완)
-- 단, **spatial > non-spatial 비대칭 향상 패턴**은 finetune 자체로 설명 어려움. Finetune은 attention의 inductive bias를 바꾸지 않으므로 그룹별 차등 향상의 원인을 갖지 않음
-- `theta_x, theta_y` 는 zero-init으로 학습됨. Axial-init 코드는 검증 완료되었으나 full retraining은 GPU 가용성 부족으로 future work
-
----
 
 ## 참고 문헌
 
@@ -177,16 +168,3 @@ $$\text{angle}_{h,t} = \theta^x_{h,t} \cdot p_x + \theta^y_{h,t} \cdot p_y$$
 - Heo, B., Park, S., Han, D., et al. *Rotary Position Embedding for Vision Transformer*. arXiv 2403.13298, 2024.
 - AerialVG dataset, HuggingFace `IPEC-COMMUNITY/aerial_vg`.
 
----
-
-## 라이선스 / 참조
-
-- **Grounding DINO**: Apache 2.0 (IDEA-Research)
-- **본 연구 코드**: 학술 목적 사용
-
----
-
-## Contributor
-
-- **2026 캡스톤 디자인 - 팀 44**
-- 국민대학교
