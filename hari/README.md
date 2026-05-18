@@ -20,14 +20,14 @@ GFIM은:
 ## Motivation
 
 - Swin Transformer는 stage가 깊어질수록 spatial resolution 감소
-- high-level feature에서 small object detail 손실 발생
-- low-level feature(P3)에는 상대적으로 spatial information이 유지됨
+- High-level feature에서 small object detail 손실 발생
+- Low-level feature(P3)에는 상대적으로 spatial information이 유지됨
 
 ## Method
 
 본 연구는 backbone의 P3 feature를
 각 feature scale(P4/P5/P6)에 맞게 변환한 뒤,
-adaptive gate를 통해 필요한 정보만 선택적으로 fusion한다.
+Adaptive Gate를 통해 필요한 정보만 선택적으로 fusion한다.
 
 ## Architecture
 
