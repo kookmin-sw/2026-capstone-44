@@ -82,7 +82,7 @@ gate = sigmoid(W1(x_level) + W2(p3_down))
 - 전체 파라미터의 약 **1.1%** 만 학습
 - **5 epoch**만으로 Zero-Shot 기준 성능 향상
 
-## 🔗 참고 자료
+## References
 
 - GroundingDINO 공식: https://github.com/IDEA-Research/GroundingDINO
 - AerialVG 데이터셋: Aerial Visual Grounding 벤치마크
