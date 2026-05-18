@@ -1,0 +1,49 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+*.egg-info/
+.eggs/
+build/
+dist/
+
+# Virtual env
+venv/
+env/
+ENV/
+.venv
+
+# Model checkpoints (too big for GitHub)
+*.pth
+*.pt
+*.bin
+*.ckpt
+*.safetensors
+
+# Output / logs
+output/
+logs/
+*.log
+
+# Data (use external storage)
+data/
+datasets/
+checkpoints/
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# Jupyter
+.ipynb_checkpoints/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Backup
+backup/
+*_archive/
