@@ -122,8 +122,6 @@ $$\text{angle}_{h,t} = \theta^x_{h,t} \cdot p_x + \theta^y_{h,t} \cdot p_y$$
 
 ## 참고 문헌
 
-- Liu, S., Zeng, Z., Ren, T., et al. *Grounding DINO: Marrying DINO with Grounded Pre-Training for Open-Set Object Detection*. arXiv 2303.05499, 2023.
 - Su, J., Lu, Y., Pan, S., et al. *RoFormer: Enhanced Transformer with Rotary Position Embedding*. arXiv 2104.09864, 2021.
 - Heo, B., Park, S., Han, D., et al. *Rotary Position Embedding for Vision Transformer*. arXiv 2403.13298, 2024.
-- AerialVG dataset, HuggingFace `IPEC-COMMUNITY/aerial_vg`.
 
