@@ -86,8 +86,6 @@ suyang/
 
 ## 🚀 환경 설정 및 재현
 
-### 1. 베이스 코드 준비
-
 ```bash
 # Grounding DINO (IDEA-Research)
 git clone https://github.com/IDEA-Research/GroundingDINO.git
@@ -98,9 +96,7 @@ pip install -e .
 git clone https://github.com/IPEC-COMMUNITY/AerialVG.git
 ```
 
-### 2. 우리 코드 적용
-
-**GroundingDINO에:**
+**GroundingDINO:**
 ```bash
 # 학습/평가 스크립트 복사
 cp suyang/GroundingDINO/*.py GroundingDINO/
@@ -110,7 +106,7 @@ cp suyang/GroundingDINO/groundingdino_modified/* \
    GroundingDINO/groundingdino/models/GroundingDINO/
 ```
 
-**AerialVG에:**
+**AerialVG:**
 ```bash
 cp suyang/AerialVG/*.py AerialVG/
 
@@ -214,5 +210,5 @@ cd AerialVG && python eval_test_srbm.py
 
 ## 👤 Contributor
 
-- **2026 캡스톤 디자인 - 팀 44 / suyang**
+- **2026 캡스톤 디자인 - 팀 44 / 변수양**
 - 국민대학교
