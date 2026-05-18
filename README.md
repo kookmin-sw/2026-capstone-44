@@ -102,8 +102,8 @@
   </tr>
   <tr>
     <td align="center" width="25%">
-      <a href="https://github.com/chosihyun">
-        <img src="https://github.com/chosihyun.png" width="130px;" style="border-radius:50%"/>
+      <a href="https://github.com/sihaun">
+        <img src="https://github.com/sihaun" width="130px;" style="border-radius:50%"/>
         <br /><br />
         <b>조시현</b>
       </a>
@@ -112,7 +112,7 @@
       <br /><br />
       <b>Research Topic</b>
       <br />
-      <sub>조시현 연구 주제<br/>(한 줄 부제)</sub>
+      <sub>Role-Aware Evidence Reasoning for Visual Grounding</sub>
       <br /><br />
     </td>
     <td align="center" width="25%">
