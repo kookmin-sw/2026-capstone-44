@@ -29,7 +29,7 @@
 GroundingDINO의 6개 attention 위치 중 **decoder self-attention만이 유일하게 spatial inductive bias 없이 일반 `nn.MultiheadAttention`으로 처리**되는 query↔query 자리임을 확인. caption의 공간관계가 작동해야 하는 *유일한 자리*.
 
 ### 2. RoPE-Mixed
-원본 `nn.MultiheadAttention` 한 덩어리를 `sa_q_proj / sa_k_proj / sa_v_proj / sa_out_proj` + `RopeMixed2D` 로 분해. reference_point의 (cx, cy)를 사용하여 Q, K에 학습 가능한 per-head 2D 회전을 적용 → query 간 attention score가 *상대 위치*에 의존하도록.
+원본 `nn.MultiheadAttention` 한 덩어리를 `sa_q_proj / sa_k_proj / sa_v_proj / sa_out_proj` + `RopeMixed2D` 로 분해. reference_point의 (cx, cy)를 사용하여 Q, K에 학습 가능한 per-head 2D 회전을 적용 → query 간 attention score가 상대 위치에 의존하도록.
 
 ### 3. 정성/정량 양방향 검증
 - 정량: Spatial vs Non-spatial 그룹별 향상폭 비대칭 확인
@@ -116,7 +116,7 @@ tgt2 = self.sa_out_proj(out)                      # zero-init → 초기엔 iden
 
 $$\text{angle}_{h,t} = \theta^x_{h,t} \cdot p_x + \theta^y_{h,t} \cdot p_y$$
 
-- **Axial-init**: paper의 Axial-RoPE 주파수와 수학적으로 동등하게 시작 (NumPy max-abs-diff = 0 검증)
+- **Axial-init**: paper의 Axial-RoPE 주파수와 수학적으로 동등하게 시작
 - **Zero-init `sa_out_proj`**: epoch 0에서 self-attention 출력 = 0 → pretrained 호환
 
 
