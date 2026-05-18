@@ -68,7 +68,7 @@
       <br /><br />
       <b>Research Topic</b>
       <br />
-      <sub>RoPE adding</sub>
+      <sub>2D RoPE-Mixed Module</sub>
       <br /><br />
     </td>
     <td align="center" width="25%">
