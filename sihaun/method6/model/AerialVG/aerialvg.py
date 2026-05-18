@@ -1,0 +1,723 @@
+import copy
+from typing import List
+
+import torch
+import torch.nn.functional as F
+from torch import nn
+from torchvision.ops.boxes import nms
+from transformers import AutoTokenizer, BertModel, BertTokenizer, RobertaModel, RobertaTokenizerFast
+
+from ...util.misc import (
+    NestedTensor,
+    accuracy,
+    get_world_size,
+    interpolate,
+    inverse_sigmoid,
+    is_dist_avail_and_initialized,
+    nested_tensor_from_tensor_list,
+)
+
+
+from ...util import box_ops, get_tokenlizer
+from ..registry import MODULE_BUILD_FUNCS
+from .backbone import build_backbone
+from .bertwarper import (
+    BertModelWarper,
+    generate_masks_with_special_tokens,
+    generate_masks_with_special_tokens_and_transfer_map,
+)
+from .transformer import build_transformer
+from .relation import build_relation_transformer, build_role_evidence_module
+from .utils import MLP, ContrastiveEmbed, sigmoid_focal_loss
+
+
+class SharedKernelConv(nn.Module):
+    def __init__(self, kernel_size=3):
+        super(SharedKernelConv, self).__init__()
+        self.shared_conv = nn.Conv2d(
+            in_channels=1, 
+            out_channels=1, 
+            kernel_size=kernel_size, 
+            stride=2,
+            padding=kernel_size // 2,
+            bias=True
+        )
+    
+    def forward(self, x):
+        self.shared_conv = self.shared_conv.to(x.device)
+        
+        out = []
+        for c in range(x.shape[1]):
+            single_channel = x[:, c:c+1, :, :]
+            out.append(self.shared_conv(single_channel))
+        out = torch.cat(out, dim=1)
+        return torch.tanh(out)
+
+
+
+
+class AerialVG(nn.Module):
+    def __init__(
+        self,
+        backbone,
+        transformer,
+        relation_transformer,
+        role_evidence_module,
+        num_queries,
+        aux_loss=True,
+        iter_update=False,
+        query_dim=4,
+        num_feature_levels=4,
+        nheads=8,
+        # two stage
+        two_stage_type="standard",  # ['no', 'standard']
+        dec_pred_bbox_embed_share=True,
+        two_stage_class_embed_share=False,
+        two_stage_bbox_embed_share=False,
+        num_patterns=0,
+        dn_number=100,
+        dn_box_noise_scale=1.0,
+        dn_label_noise_ratio=0.5,
+        dn_labelbook_size=91,
+        text_encoder_type="bert-base-uncased",
+        sub_sentence_present=True,
+        max_text_len=256,
+        topk = 15,
+        relation_weight = 0.4,
+        method2_aux_beta=0.5,
+        method2_aux_eps=1e-6,
+        method2_aux_topk=4,
+    ):
+        """Initializes the model."""
+        super().__init__()
+        self.num_queries = num_queries
+        self.transformer = transformer
+
+        self.relation_transformer = relation_transformer
+        self.role_evidence_module = role_evidence_module
+        self.topk = topk
+        self.relation_weight = relation_weight
+        self.method2_aux_beta = method2_aux_beta
+        self.method2_aux_eps = method2_aux_eps
+        self.method2_aux_topk = method2_aux_topk
+
+        self.hidden_dim = hidden_dim = transformer.d_model
+        self.num_feature_levels = num_feature_levels
+        self.nheads = nheads
+        self.max_text_len = max_text_len
+        self.sub_sentence_present = sub_sentence_present
+
+        # setting query dim
+        self.query_dim = query_dim
+        assert query_dim == 4
+
+        # for dn training
+        self.num_patterns = num_patterns
+        self.dn_number = dn_number
+        self.dn_box_noise_scale = dn_box_noise_scale
+        self.dn_label_noise_ratio = dn_label_noise_ratio
+        self.dn_labelbook_size = dn_labelbook_size
+
+        # bert
+        self.tokenizer = get_tokenlizer.get_tokenlizer(text_encoder_type)
+        self.bert = get_tokenlizer.get_pretrained_language_model(text_encoder_type)
+        self.bert.pooler.dense.weight.requires_grad_(False)
+        self.bert.pooler.dense.bias.requires_grad_(False)
+        self.bert = BertModelWarper(bert_model=self.bert)
+
+        self.feat_map = nn.Linear(self.bert.config.hidden_size, self.hidden_dim, bias=True)
+        nn.init.constant_(self.feat_map.bias.data, 0)
+        nn.init.xavier_uniform_(self.feat_map.weight.data)
+        # freeze
+
+                
+        self.sim_param = nn.Parameter(torch.tensor(0.3, dtype=torch.float32))
+        # 上采样卷积层（用于扩大上层特征图）
+        self.upsample_conv = nn.ConvTranspose2d(
+            in_channels=self.nheads// 2,
+            out_channels=self.nheads// 2,
+            kernel_size=3,
+            stride=2,
+            padding=1,
+            output_padding=1,
+            groups=self.nheads// 2
+        )
+
+        # 下采样卷积层（用于缩小特征图）
+        self.downsample_conv = SharedKernelConv(kernel_size=3)
+
+
+        # special tokens
+        self.specical_tokens = self.tokenizer.convert_tokens_to_ids(["[CLS]", "[SEP]", ".", "?"])
+
+        # prepare input projection layers
+        if num_feature_levels > 1:
+            num_backbone_outs = len(backbone.num_channels)
+            input_proj_list = []
+            for _ in range(num_backbone_outs):
+                in_channels = backbone.num_channels[_]
+                input_proj_list.append(
+                    nn.Sequential(
+                        nn.Conv2d(in_channels, hidden_dim, kernel_size=1),
+                        nn.GroupNorm(32, hidden_dim),
+                    )
+                )
+            for _ in range(num_feature_levels - num_backbone_outs):
+                input_proj_list.append(
+                    nn.Sequential(
+                        nn.Conv2d(in_channels, hidden_dim, kernel_size=3, stride=2, padding=1),
+                        nn.GroupNorm(32, hidden_dim),
+                    )
+                )
+                in_channels = hidden_dim
+            self.input_proj = nn.ModuleList(input_proj_list)
+        else:
+            assert two_stage_type == "no", "two_stage_type should be no if num_feature_levels=1 !!!"
+            self.input_proj = nn.ModuleList(
+                [
+                    nn.Sequential(
+                        nn.Conv2d(backbone.num_channels[-1], hidden_dim, kernel_size=1),
+                        nn.GroupNorm(32, hidden_dim),
+                    )
+                ]
+            )
+
+        self.backbone = backbone
+        self.aux_loss = aux_loss
+        self.box_pred_damping = box_pred_damping = None
+
+        self.iter_update = iter_update
+        assert iter_update, "Why not iter_update?"
+
+        # prepare pred layers
+        self.dec_pred_bbox_embed_share = dec_pred_bbox_embed_share
+        # prepare class & box embed
+        _class_embed = ContrastiveEmbed()
+
+        _bbox_embed = MLP(hidden_dim, hidden_dim, 4, 3)
+        nn.init.constant_(_bbox_embed.layers[-1].weight.data, 0)
+        nn.init.constant_(_bbox_embed.layers[-1].bias.data, 0)
+
+        if dec_pred_bbox_embed_share:
+            box_embed_layerlist = [_bbox_embed for i in range(transformer.num_decoder_layers)]
+        else:
+            box_embed_layerlist = [
+                copy.deepcopy(_bbox_embed) for i in range(transformer.num_decoder_layers)
+            ]
+        class_embed_layerlist = [_class_embed for i in range(transformer.num_decoder_layers)]
+        self.bbox_embed = nn.ModuleList(box_embed_layerlist)
+        self.class_embed = nn.ModuleList(class_embed_layerlist)
+        self.transformer.decoder.bbox_embed = self.bbox_embed
+        self.transformer.decoder.class_embed = self.class_embed
+
+        # two stage
+        self.two_stage_type = two_stage_type
+        assert two_stage_type in ["no", "standard"], "unknown param {} of two_stage_type".format(
+            two_stage_type
+        )
+        if two_stage_type != "no":
+            if two_stage_bbox_embed_share:
+                assert dec_pred_bbox_embed_share
+                self.transformer.enc_out_bbox_embed = _bbox_embed
+            else:
+                self.transformer.enc_out_bbox_embed = copy.deepcopy(_bbox_embed)
+
+            if two_stage_class_embed_share:
+                assert dec_pred_bbox_embed_share
+                self.transformer.enc_out_class_embed = _class_embed
+            else:
+                self.transformer.enc_out_class_embed = copy.deepcopy(_class_embed)
+
+            self.refpoint_embed = None
+
+        self._reset_parameters()
+
+    def _masked_query_text_scores(self, pred_logits, text_token_mask):
+        token_scores = pred_logits.sigmoid()
+        if text_token_mask.shape[-1] < token_scores.shape[-1]:
+            pad = token_scores.shape[-1] - text_token_mask.shape[-1]
+            text_token_mask = F.pad(text_token_mask, (0, pad), value=False)
+        elif text_token_mask.shape[-1] > token_scores.shape[-1]:
+            text_token_mask = text_token_mask[..., : token_scores.shape[-1]]
+        valid_mask = text_token_mask[:, None, :].expand_as(token_scores)
+        masked_scores = token_scores.masked_fill(~valid_mask, float("-inf"))
+        query_scores = masked_scores.max(dim=-1).values
+        query_scores = torch.where(torch.isfinite(query_scores), query_scores, torch.zeros_like(query_scores))
+        return query_scores
+
+    def _reset_parameters(self):
+        # init input_proj
+        for proj in self.input_proj:
+            nn.init.xavier_uniform_(proj[0].weight, gain=1)
+            nn.init.constant_(proj[0].bias, 0)
+
+    def set_image_tensor(self, samples: NestedTensor):
+        if isinstance(samples, (list, torch.Tensor)):
+            samples = nested_tensor_from_tensor_list(samples)
+        self.features, self.poss = self.backbone(samples)
+
+    def unset_image_tensor(self):
+        if hasattr(self, 'features'):
+            del self.features
+        if hasattr(self,'poss'):
+            del self.poss 
+
+    def set_image_features(self, features , poss):
+        self.features = features
+        self.poss = poss
+
+    def init_ref_points(self, use_num_queries):
+        self.refpoint_embed = nn.Embedding(use_num_queries, self.query_dim)
+
+    def _resolve_samples_device(self, samples):
+        if isinstance(samples, NestedTensor):
+            return samples.tensors.device
+        if isinstance(samples, torch.Tensor):
+            return samples.device
+        if isinstance(samples, list) and samples:
+            return samples[0].device
+        raise TypeError("Unsupported samples type: {}".format(type(samples)))
+
+    def _masked_query_text_scores(self, pred_logits, text_token_mask):
+        token_scores = pred_logits.sigmoid()
+        if text_token_mask.shape[-1] < token_scores.shape[-1]:
+            pad = token_scores.shape[-1] - text_token_mask.shape[-1]
+            text_token_mask = F.pad(text_token_mask, (0, pad), value=False)
+        elif text_token_mask.shape[-1] > token_scores.shape[-1]:
+            text_token_mask = text_token_mask[..., : token_scores.shape[-1]]
+        valid_mask = text_token_mask[:, None, :].expand_as(token_scores)
+        masked_scores = token_scores.masked_fill(~valid_mask, float("-inf"))
+        query_scores = masked_scores.max(dim=-1).values
+        query_scores = torch.where(torch.isfinite(query_scores), query_scores, torch.zeros_like(query_scores))
+        return query_scores
+
+    def _pairwise_iou_matrix_cxcywh(self, pred_boxes, target_boxes):
+        if target_boxes.numel() == 0:
+            return pred_boxes.new_zeros((pred_boxes.shape[0], 0))
+        pred_xyxy = box_ops.box_cxcywh_to_xyxy(pred_boxes)
+        target_xyxy = box_ops.box_cxcywh_to_xyxy(target_boxes)
+
+        inter_x1 = torch.max(pred_xyxy[:, None, 0], target_xyxy[None, :, 0])
+        inter_y1 = torch.max(pred_xyxy[:, None, 1], target_xyxy[None, :, 1])
+        inter_x2 = torch.min(pred_xyxy[:, None, 2], target_xyxy[None, :, 2])
+        inter_y2 = torch.min(pred_xyxy[:, None, 3], target_xyxy[None, :, 3])
+
+        inter_w = torch.clamp(inter_x2 - inter_x1, min=0.0)
+        inter_h = torch.clamp(inter_y2 - inter_y1, min=0.0)
+        inter_area = inter_w * inter_h
+
+        pred_area = (pred_xyxy[:, 2] - pred_xyxy[:, 0]).clamp(min=0.0) * (
+            pred_xyxy[:, 3] - pred_xyxy[:, 1]
+        ).clamp(min=0.0)
+        target_area = (target_xyxy[:, 2] - target_xyxy[:, 0]).clamp(min=0.0) * (
+            target_xyxy[:, 3] - target_xyxy[:, 1]
+        ).clamp(min=0.0)
+        union = pred_area[:, None] + target_area[None, :] - inter_area
+        return inter_area / (union + 1e-6)
+
+    def _unique_preserve_order(self, indices):
+        seen = set()
+        ordered = []
+        for index in indices:
+            index = int(index)
+            if index in seen:
+                continue
+            seen.add(index)
+            ordered.append(index)
+        return ordered
+
+    def _build_method2_supervision_indices(self, pred_boxes, topk_indices, targets):
+        batch_indices = []
+        max_len = topk_indices.shape[1]
+        for batch_idx, target in enumerate(targets):
+            indices = topk_indices[batch_idx].tolist()
+            if target is not None and "gt_box" in target:
+                image_boxes = pred_boxes[batch_idx]
+                gt_box = target["gt_box"].to(image_boxes.device).unsqueeze(0)
+                rescue = [self._pairwise_iou_matrix_cxcywh(image_boxes, gt_box).squeeze(1).argmax().item()]
+                aux_boxes = target.get("aux_boxes")
+                if aux_boxes is not None and aux_boxes.numel() > 0:
+                    aux_boxes = aux_boxes.to(image_boxes.device)
+                    rescue.extend(self._pairwise_iou_matrix_cxcywh(image_boxes, aux_boxes).argmax(dim=0).tolist())
+                indices = self._unique_preserve_order(indices + rescue)
+            batch_indices.append(indices)
+            max_len = max(max_len, len(indices))
+
+        padded = topk_indices.new_zeros((topk_indices.shape[0], max_len))
+        valid_mask = torch.zeros((topk_indices.shape[0], max_len), dtype=torch.bool, device=topk_indices.device)
+        for batch_idx, indices in enumerate(batch_indices):
+            padded[batch_idx, : len(indices)] = torch.as_tensor(indices, dtype=topk_indices.dtype, device=topk_indices.device)
+            valid_mask[batch_idx, : len(indices)] = True
+        return padded, valid_mask
+
+    def _scatter_method2_refinements(
+        self,
+        base_logits,
+        base_boxes,
+        refined_logits,
+        refined_boxes,
+        refine_indices,
+        refine_valid_mask,
+    ):
+        final_logits = base_logits.clone()
+        final_boxes = base_boxes.clone()
+
+        for batch_idx in range(refine_indices.shape[0]):
+            sample_valid_mask = refine_valid_mask[batch_idx].bool()
+            if not sample_valid_mask.any():
+                continue
+            sample_indices = refine_indices[batch_idx][sample_valid_mask]
+            final_logits[batch_idx, sample_indices] = refined_logits[batch_idx, sample_valid_mask]
+            final_boxes[batch_idx, sample_indices] = refined_boxes[batch_idx, sample_valid_mask]
+
+        return final_logits, final_boxes
+
+    def forward(self, samples: NestedTensor, targets: List = None, **kw):
+            """The forward expects a NestedTensor, which consists of:
+                - samples.tensor: batched images, of shape [batch_size x 3 x H x W]
+                - samples.mask: a binary mask of shape [batch_size x H x W], containing 1 on padded pixels
+
+            It returns a dict with the following elements:
+                - "pred_logits": the classification logits (including no-object) for all queries.
+                                Shape= [batch_size x num_queries x num_classes]
+                - "pred_boxes": The normalized boxes coordinates for all queries, represented as
+                                (center_x, center_y, width, height). These values are normalized in [0, 1],
+                                relative to the size of each individual image (disregarding possible padding).
+                                See PostProcess for information on how to retrieve the unnormalized bounding box.
+                - "aux_outputs": Optional, only returned when auxilary losses are activated. It is a list of
+                                dictionnaries containing the two above keys for each decoder layer.
+            """
+            device = self._resolve_samples_device(samples)
+            self.downsample_conv.to(device)
+
+            if targets is None:
+                captions = kw["captions"]
+            else:
+                captions = [t["caption"] for t in targets]
+            # encoder texts
+
+            tokenized = self.tokenizer(captions, padding="longest", return_tensors="pt").to(device)
+            one_hot_token = tokenized
+
+            (
+                text_self_attention_masks,
+                position_ids,
+                cate_to_token_mask_list,
+            ) = generate_masks_with_special_tokens_and_transfer_map(
+                tokenized, self.specical_tokens, self.tokenizer
+            )
+
+            if text_self_attention_masks.shape[1] > self.max_text_len:
+                text_self_attention_masks = text_self_attention_masks[
+                    :, : self.max_text_len, : self.max_text_len
+                ]
+                position_ids = position_ids[:, : self.max_text_len]
+                tokenized["input_ids"] = tokenized["input_ids"][:, : self.max_text_len]
+                tokenized["attention_mask"] = tokenized["attention_mask"][:, : self.max_text_len]
+                tokenized["token_type_ids"] = tokenized["token_type_ids"][:, : self.max_text_len]
+
+            # extract text embeddings
+            if self.sub_sentence_present:
+                tokenized_for_encoder = {k: v for k, v in tokenized.items() if k != "attention_mask"}
+                tokenized_for_encoder["attention_mask"] = text_self_attention_masks
+                tokenized_for_encoder["position_ids"] = position_ids
+            else:
+                tokenized_for_encoder = tokenized
+
+            bert_output = self.bert(**tokenized_for_encoder)  # bs, 195, 768
+
+            encoded_text = self.feat_map(bert_output["last_hidden_state"])  # bs, 195, d_model
+            text_token_mask = tokenized.attention_mask.bool()  # bs, 195
+            # text_token_mask: True for nomask, False for mask
+            # text_self_attention_masks: True for nomask, False for mask
+
+            if encoded_text.shape[1] > self.max_text_len:
+                encoded_text = encoded_text[:, : self.max_text_len, :]
+                text_token_mask = text_token_mask[:, : self.max_text_len]
+                position_ids = position_ids[:, : self.max_text_len]
+                text_self_attention_masks = text_self_attention_masks[
+                    :, : self.max_text_len, : self.max_text_len
+                ]
+
+            text_dict = {
+                "encoded_text": encoded_text,  # bs, 195, d_model
+                "text_token_mask": text_token_mask,  # bs, 195
+                "position_ids": position_ids,  # bs, 195
+                "text_self_attention_masks": text_self_attention_masks,  # bs, 195,195
+            }
+
+
+            if isinstance(samples, list):
+                samples = nested_tensor_from_tensor_list(samples)
+            elif isinstance(samples, torch.Tensor):
+                if samples.dim() == 3:
+                    samples = nested_tensor_from_tensor_list([samples])
+                elif samples.dim() == 4:
+                    mask = torch.zeros(
+                        (samples.shape[0], samples.shape[-2], samples.shape[-1]),
+                        dtype=torch.bool,
+                        device=samples.device,
+                    )
+                    samples = NestedTensor(samples, mask)
+                else:
+                    raise ValueError("Unsupported samples tensor shape: {}".format(samples.shape))
+            features, poss = self.backbone(samples)
+            srcs = []
+            masks = []
+            for l, feat in enumerate(features):
+                src, mask = feat.decompose()
+                srcs.append(self.input_proj[l](src))
+                masks.append(mask)
+                assert mask is not None
+            if self.num_feature_levels > len(srcs):
+                _len_srcs = len(srcs)
+                for l in range(_len_srcs, self.num_feature_levels):
+                    if l == _len_srcs:
+                        src = self.input_proj[l](features[-1].tensors)
+                    else:
+                        src = self.input_proj[l](srcs[-1])
+                    m = samples.mask
+                    mask = F.interpolate(m[None].float(), size=src.shape[-2:]).to(torch.bool)[0]
+                    pos_l = self.backbone[1](NestedTensor(src, mask)).to(src.dtype)
+                    srcs.append(src)
+                    masks.append(mask)
+                    poss.append(pos_l)
+
+            input_query_bbox = input_query_label = attn_mask = dn_meta = None
+            # import time
+            # start_time = time.time()
+            hs, reference, hs_enc, ref_enc, init_box_proposal = self.transformer(
+                srcs, masks, input_query_bbox, poss, input_query_label, attn_mask, text_dict,sim_parm = self.sim_param,up_conv = self.upsample_conv,down_conv = self.downsample_conv
+            )
+            # end_time = time.time()
+            # print(f"Transformer time: {end_time - start_time} seconds")
+
+
+            # deformable-detr-like anchor update
+            outputs_coord_list = []
+            for dec_lid, (layer_ref_sig, layer_bbox_embed, layer_hs) in enumerate(
+                zip(reference[:-1], self.bbox_embed, hs)
+            ):
+                layer_delta_unsig = layer_bbox_embed(layer_hs)
+                layer_outputs_unsig = layer_delta_unsig + inverse_sigmoid(layer_ref_sig)
+                layer_outputs_unsig = layer_outputs_unsig.sigmoid()
+                outputs_coord_list.append(layer_outputs_unsig)
+            outputs_coord_list = torch.stack(outputs_coord_list)
+
+
+            outputs_class = torch.stack(
+                [
+                    layer_cls_embed(layer_hs, text_dict)
+                    for layer_cls_embed, layer_hs in zip(self.class_embed, hs)
+                ]
+            )
+
+            final_decoder_logits = outputs_class[-1]
+            final_hidden_features = hs[-1]
+            base_query_scores = self._masked_query_text_scores(final_decoder_logits, text_dict["text_token_mask"])
+            topk_probs, topk_indices = torch.topk(base_query_scores, self.topk, dim=1)  # shape: (batch_size, topk)
+            topk_features = torch.gather(final_hidden_features, 1, topk_indices.unsqueeze(-1).expand(-1, -1, final_hidden_features.size(-1)))
+            topk_boxes = torch.gather(
+                outputs_coord_list[-1],
+                1,
+                topk_indices.unsqueeze(-1).expand(-1, -1, outputs_coord_list[-1].size(-1)),
+            )
+            topk_logits = torch.gather(
+                final_decoder_logits,
+                1,
+                topk_indices.unsqueeze(-1).expand(-1, -1, final_decoder_logits.size(-1)),
+            )
+
+
+            # TODO
+            # import time
+            # start_time = time.time()
+            new_logits = self.relation_transformer(topk_features,text_dict)
+            # end_time = time.time()
+            # print(f"Relation transformer time: {end_time - start_time} seconds")
+            expanded_topk_indices = topk_indices.unsqueeze(-1).expand(-1, -1, new_logits.size(-1))  # shape: (batch_size, topk, 256)
+            weighted_original_logits = final_decoder_logits.scatter(1, expanded_topk_indices,(1-self.relation_weight) * final_decoder_logits.gather(1, expanded_topk_indices))
+            weighted_new_logits = self.relation_weight * new_logits
+            # print('new_logits',new_logits)
+            # print('weighted_new_logits',weighted_new_logits)
+
+            # Avoid in-place updates on the stacked decoder logits so backward can
+            # still traverse the original decoder graph safely.
+            fused_pred_logits = weighted_original_logits.scatter_add(1, expanded_topk_indices, weighted_new_logits)
+            # print(' fused_pred_logits', fused_pred_logits.shape, fused_pred_logits)
+
+            # # fused_pred_logits = final_pred_logits.scatter_add(1, expanded_topk_indices, new_logits)
+
+
+            if self.training and targets is not None:
+                method2_indices, method2_valid_mask = self._build_method2_supervision_indices(
+                    outputs_coord_list[-1],
+                    topk_indices,
+                    targets,
+                )
+            else:
+                method2_indices = topk_indices
+                method2_valid_mask = torch.ones_like(topk_indices, dtype=torch.bool)
+
+            method2_features = torch.gather(
+                final_hidden_features,
+                1,
+                method2_indices.unsqueeze(-1).expand(-1, -1, final_hidden_features.size(-1)),
+            )
+            method2_boxes = torch.gather(
+                outputs_coord_list[-1],
+                1,
+                method2_indices.unsqueeze(-1).expand(-1, -1, outputs_coord_list[-1].size(-1)),
+            )
+            method2_logits = torch.gather(
+                final_decoder_logits,
+                1,
+                method2_indices.unsqueeze(-1).expand(-1, -1, final_decoder_logits.size(-1)),
+            )
+            method2_scores = torch.gather(base_query_scores, 1, method2_indices)
+            method2_features = method2_features * method2_valid_mask.unsqueeze(-1)
+
+            method2_outputs = self.role_evidence_module(
+                method2_features,
+                text_dict,
+                selected_valid_mask=method2_valid_mask,
+            )
+            role_logits = method2_outputs["role_logits"]
+            role_probs = method2_outputs["role_probs"]
+            refined_features = method2_outputs["refined_features"]
+            refined_valid_mask = method2_outputs.get("refined_valid_mask", method2_valid_mask)
+            refined_logits = method2_outputs["refined_logits"]
+            refined_scores = self._masked_query_text_scores(
+                refined_logits, text_dict["text_token_mask"]
+            )
+            refined_scores = refined_scores.masked_fill(~refined_valid_mask, float("-inf"))
+            refined_box_delta = self.bbox_embed[-1](refined_features)
+            refined_boxes = (refined_box_delta + inverse_sigmoid(method2_boxes)).sigmoid()
+            final_pred_logits, final_pred_boxes = self._scatter_method2_refinements(
+                fused_pred_logits,
+                outputs_coord_list[-1],
+                refined_logits,
+                refined_boxes,
+                method2_indices,
+                refined_valid_mask,
+            )
+
+            aux_scores = method2_scores + self.method2_aux_beta * torch.log(
+                role_probs[..., 1].clamp_min(self.method2_aux_eps)
+            )
+            aux_scores = aux_scores.masked_fill(~method2_valid_mask, float("-inf"))
+            aux_topk = min(self.method2_aux_topk, aux_scores.shape[1])
+            aux_top_scores, aux_top_indices = torch.topk(aux_scores, aux_topk, dim=1)
+            aux_top_query_indices = torch.gather(method2_indices, 1, aux_top_indices)
+
+            out = {"pred_logits": final_pred_logits, "pred_boxes": final_pred_boxes} #(1,900,256) (,1,900,4)
+            out["base_pred_logits"] = fused_pred_logits
+            out["base_pred_boxes"] = outputs_coord_list[-1]
+            out["base_query_scores"] = base_query_scores
+            out["selected_indices"] = topk_indices
+            out["selected_scores"] = topk_probs
+            out["selected_features"] = topk_features
+            out["selected_boxes"] = topk_boxes
+            out["selected_logits"] = topk_logits
+            out["query_features"] = final_hidden_features
+            out["method2_super_indices"] = method2_indices
+            out["method2_super_valid_mask"] = method2_valid_mask
+            out["method2_super_features"] = method2_features
+            out["method2_super_boxes"] = method2_boxes
+            out["method2_super_logits"] = method2_logits
+            out["method2_super_scores"] = method2_scores
+            out["method2_role_logits"] = role_logits
+            out["method2_role_probs"] = role_probs
+            out["method2_hard_gt_indices"] = method2_outputs["gt_indices"]
+            out["method2_hard_gt_mask"] = method2_outputs["gt_mask"]
+            out["method2_hard_aux_indices"] = method2_outputs["aux_indices"]
+            out["method2_hard_aux_valid_mask"] = method2_outputs["aux_valid_mask"]
+            out["method2_hard_aux_gate"] = method2_outputs["aux_gate"]
+            out["method2_role_text_context"] = method2_outputs["role_text_context"]
+            out["method2_text_conditioned_gt"] = method2_outputs["text_conditioned_gt"]
+            out["method2_aux_attn_weights"] = method2_outputs["aux_attention_weights"]
+            out["method2_refined_features"] = refined_features
+            out["method2_refined_valid_mask"] = refined_valid_mask
+            out["method2_refined_logits"] = refined_logits
+            out["method2_refined_scores"] = refined_scores
+            out["method2_refined_boxes"] = refined_boxes
+            out["method2_final_scores"] = self._masked_query_text_scores(
+                final_pred_logits, text_dict["text_token_mask"]
+            )
+            out["method2_aux_scores"] = aux_scores
+            out["method2_aux_top_indices"] = aux_top_indices
+            out["method2_aux_top_query_indices"] = aux_top_query_indices
+            out["method2_aux_top_scores"] = aux_top_scores
+                # Used to calculate losses
+            bs, len_td = text_dict['text_token_mask'].shape
+            out['text_mask'] = torch.zeros(bs, self.max_text_len, dtype=torch.bool, device=device)
+            for b in range(bs):
+                for j in range(len_td):
+                    if text_dict['text_token_mask'][b][j] == True:
+                        out['text_mask'][b][j] = True
+
+            # for intermediate outputs
+            if self.aux_loss:
+                out['aux_outputs'] = self._set_aux_loss(outputs_class, outputs_coord_list)
+            out['token']=one_hot_token
+            # # for encoder output
+            if hs_enc is not None:
+                # prepare intermediate outputs
+                interm_coord = ref_enc[-1]
+                interm_class = self.transformer.enc_out_class_embed(hs_enc[-1], text_dict)
+                out['interm_outputs'] = {'pred_logits': interm_class, 'pred_boxes': interm_coord}
+                out['interm_outputs_for_matching_pre'] = {'pred_logits': interm_class, 'pred_boxes': init_box_proposal}
+
+            return out
+
+    @torch.jit.unused
+    def _set_aux_loss(self, outputs_class, outputs_coord):
+
+        return [
+            {"pred_logits": a, "pred_boxes": b}
+            for a, b in zip(outputs_class[:-1], outputs_coord[:-1])
+        ]
+
+
+@MODULE_BUILD_FUNCS.registe_with_name(module_name="aerialvg")
+def build_aerialvg(args):
+
+    backbone = build_backbone(args)
+    transformer = build_transformer(args)
+    relation_transformer = build_relation_transformer(args)
+    role_evidence_module = build_role_evidence_module(args)
+
+    dn_labelbook_size = args.dn_labelbook_size
+    dec_pred_bbox_embed_share = args.dec_pred_bbox_embed_share
+    sub_sentence_present = args.sub_sentence_present
+
+    model = AerialVG(
+        backbone,
+        transformer,
+        relation_transformer,
+        role_evidence_module,
+        num_queries=args.num_queries,
+        aux_loss=True,
+        iter_update=True,
+        query_dim=4,
+        num_feature_levels=args.num_feature_levels,
+        nheads=args.nheads,
+        dec_pred_bbox_embed_share=dec_pred_bbox_embed_share,
+        two_stage_type=args.two_stage_type,
+        two_stage_bbox_embed_share=args.two_stage_bbox_embed_share,
+        two_stage_class_embed_share=args.two_stage_class_embed_share,
+        num_patterns=args.num_patterns,
+        dn_number=0,
+        dn_box_noise_scale=args.dn_box_noise_scale,
+        dn_label_noise_ratio=args.dn_label_noise_ratio,
+        dn_labelbook_size=dn_labelbook_size,
+        text_encoder_type=args.text_encoder_type,
+        sub_sentence_present=sub_sentence_present,
+        max_text_len=args.max_text_len,
+        topk=args.topk,
+        relation_weight=args.relation_weight,
+        method2_aux_beta=getattr(args, "method2_aux_beta", 0.5),
+        method2_aux_eps=getattr(args, "method2_aux_eps", 1e-6),
+        method2_aux_topk=getattr(args, "method2_aux_topk", 4),
+    )
+    return model
