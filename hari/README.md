@@ -75,5 +75,5 @@ gate = sigmoid(W1(x_level) + W2(p3_down))
 | Grounding DINO | Zero-shot | 12.77 | 34.49 |
 | Grounding DINO + GFIM (Ours) | Backbone Frozen | **15.73** | **49.08** |
 
-- 전체 파라미터의 약 1.1%만 학습
-- 5 epoch만으로 zero-shot 기준 성능 향상
+- 전체 파라미터의 약 **1.1%** 만 학습
+- **5 epoch**만으로 zero-shot 기준 성능 향상
