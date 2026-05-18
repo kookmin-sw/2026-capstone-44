@@ -59,7 +59,7 @@ subeen/
 
 ---
 
-## 환경 설정 및 재현
+## 설정
 
 ### 1. 데이터 준비
 
@@ -86,7 +86,7 @@ python eval_aerial_modified.py
 
 ---
 
-## 방법론 (RoPE-Mixed 핵심)
+## 방법 (RoPE-Mixed 핵심)
 
 ### Decoder Self-Attention 재구성
 
