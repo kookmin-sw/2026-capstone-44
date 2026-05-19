@@ -4,7 +4,7 @@
 
 ---
 
-## 🎯 핵심 결과 (Test Set)
+## 핵심 결과 (Test Set)
 
 | Method | Top-1 | Top-5 |
 |--------|-------|-------|
@@ -16,7 +16,7 @@
 
 ---
 
-## 📌 주요 Contribution
+## 주요 Contribution
 
 ### 1. SRBM: 새로운 효율적 Relation 모듈
 - **Attention bias 방식**: 5-dim geometry feature (sinθ, cosθ, dist, Δw, Δh) → MLP (5→64→1) → scalar bias → self-attention logit에 직접 주입
@@ -35,14 +35,14 @@
 | 30 | 31.53% | 41.94% | 29% |
 | 50 | **34.54%** | **46.46%** | **18%** |
 
-### 4. 종합 Ablation Study + Failure 분석
+### 4. Ablation Study + Failure 분석
 - Recall@K 진단: K=15→K=50으로 ceiling 52→71% 증가
 - Failure split: 61.1% all-miss, 10.1% rank-only, 28.8% correct
 - Dataset 라벨 정확도 분석: **27.5%가 8방위 기준 부정확** (대각선 36~39%)
 
 ---
 
-## 📂 디렉토리 구조
+## 디렉토리 구조
 
 ```
 suyang/
@@ -84,7 +84,7 @@ suyang/
 
 ---
 
-## 🚀 환경 설정 및 재현
+## 환경 설정 및 재현
 
 ```bash
 # Grounding DINO (IDEA-Research)
@@ -153,7 +153,7 @@ cd AerialVG && python eval_test_srbm.py
 
 ---
 
-## 🔬 SRBM 아키텍처
+## SRBM 아키텍처
 
 ```
 [Top-K candidates from GDINO]
@@ -184,7 +184,7 @@ cd AerialVG && python eval_test_srbm.py
 
 ---
 
-## 📊 전체 실험 결과 (Val Set)
+## 전체 실험 결과 (Val Set)
 
 | Method | Trainable | Top-1 | Top-5 |
 |--------|-----------|-------|-------|
@@ -200,7 +200,7 @@ cd AerialVG && python eval_test_srbm.py
 
 ---
 
-## 📝 라이선스 / 참조
+## 라이선스 / 참조
 
 - **Grounding DINO**: Apache 2.0 (IDEA-Research)
 - **AerialVG**: paper code license 참조
@@ -208,7 +208,7 @@ cd AerialVG && python eval_test_srbm.py
 
 ---
 
-## 👤 Contributor
+## Contributor
 
 - **2026 캡스톤 디자인 - 팀 44 / 변수양**
 - 국민대학교
