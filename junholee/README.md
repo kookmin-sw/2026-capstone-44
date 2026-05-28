@@ -49,35 +49,114 @@ junholee/
 
 ## Architecture
 
+## Architecture
+
+```text
+Grounding DINO with Feature-DPAA
+
+Input Image + Text Query
+        |
+        v
+Frozen Swin Image Backbone
+        |
+        v
+Frozen Input Projection
+        |
+        +-- input_proj[0] -> Feature-DPAA
+        |
+        +-- input_proj[1] -> Feature-DPAA
+        |
+        +-- input_proj[2] -> Feature-DPAA
+        |
+        +-- input_proj[3] -> Feature-DPAA
+        |
+        v
+Frozen Feature Enhancer / Transformer
+        |
+        v
+Frozen Decoder
+        |
+        v
+Frozen Prediction Head
+        |
+        v
+Bounding Box Prediction
+```
+
+```text
 Feature-DPAA Module
 
-Input feature x ∈ R^{B×C×H×W}
+Input feature x: [B, C, H, W]
 
-│
-├── (1) Down Projection
-│       1×1 Conv: C → C_mid
-│
-├── (2) Dual-Path Depthwise Convolution
-│       │
-│       ├── Large-kernel branch
-│       │       DWConv_large, kernel = k_L
-│       │       Captures broad aerial context
-│       │
-│       └── Small-kernel branch
-│               DWConv_small, kernel = k_S
-│               Preserves local spatial detail
-│
-├── (3) Dual-Path Aggregation
-│       z = DWConv_large(z) + DWConv_small(z)
-│
-├── (4) Non-linearity
-│       z = GELU(z)
-│
-├── (5) Up Projection
-│       1×1 Conv: C_mid → C
-│
-└── (6) Residual Connection
-        y = x + scale · Up(z)
+        x
+        |
+        v
++----------------------+
+| Down Projection      |
+| 1x1 Conv: C -> C_mid |
++----------------------+
+        |
+        v
+        z
+        |
+        +-------------------------------+
+        |                               |
+        v                               v
++----------------------+        +----------------------+
+| Large-kernel DWConv  |        | Small-kernel DWConv  |
+| kernel = k_L         |        | kernel = k_S         |
+| broad aerial context |        | fine spatial detail  |
++----------------------+        +----------------------+
+        |                               |
+        +---------------+---------------+
+                        |
+                        v
++----------------------+
+| Path Aggregation     |
+| z_L + z_S            |
++----------------------+
+                        |
+                        v
++----------------------+
+| GELU                 |
++----------------------+
+                        |
+                        v
++----------------------+
+| Up Projection        |
+| 1x1 Conv: C_mid -> C |
++----------------------+
+                        |
+                        v
++----------------------+
+| Residual Update      |
+| y = x + scale * Up(z)|
++----------------------+
+```
+
+The mathematical formulation is:
+
+```text
+z = Down(x)
+
+z_L = DWConv_large(z)
+
+z_S = DWConv_small(z)
+
+z_A = GELU(z_L + z_S)
+
+y = x + scale * Up(z_A)
+```
+
+where:
+
+- `x`: input projected visual feature
+- `Down`: 1x1 bottleneck projection
+- `DWConv_large`: large-kernel depthwise convolution
+- `DWConv_small`: small-kernel depthwise convolution
+- `Up`: 1x1 channel restoration projection
+- `scale`: residual scaling factor
+
 
 ## Results
 
