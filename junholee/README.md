@@ -149,7 +149,6 @@ where:
 | GroundingDINO | Zero-Shot | 12.77 | 34.49 |
 | GroundingDINO + DPAA (Ours) | Backbone Frozen | 18.00 | 44.00 |
 
-## Parameters
 ## Parameter Efficiency
 
 Feature-DPAA is highly parameter-efficient because it uses both bottleneck projection and depthwise convolution.
@@ -163,16 +162,15 @@ Small DWConv 3x3     : 64 x 3 x 3 + 64     = 640
 Up 1x1 Conv          : 64 x 256 + 256      = 16,640
 
 Total per module     : 48,192
-```
 
-Since Feature-DPAA is inserted into four multi-scale feature levels:
-
-```text
 48,192 x 4 = 192,768 trainable parameters
+```
+```text
+
 
 Feature-DPAA의 높은 파라미터 효율성은 bottleneck projection과 depthwise convolution 구조에서 비롯된다. 입력 feature의 channel dimension을 256에서 64로 축소한 뒤, large/small kernel convolution을 depthwise 방식으로 적용함으로써 large kernel을 사용하면서도 파라미터 증가를 최소화하였다. 또한 기존 Grounding DINO의 Detection Network는 모두 freeze하고, input projection 이후 4개의 multi-scale feature level에 삽입된 Feature-DPAA만 학습하였기 때문에 전체 학습 가능 파라미터는 192,768개, 전체 모델의 약 0.1114%에 불과하다.
 
-## Reference
+## References
 
 - GroundingDINO 공식: https://github.com/IDEA-Research/GroundingDINO
 - AerialVG 데이터셋: Aerial Visual Grounding 벤치마크
