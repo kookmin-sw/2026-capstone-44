@@ -99,7 +99,7 @@
       <br /><br />
       <b>Research Topic</b>
       <br />
-      <sub>KNN Relation-based Visual Grounding</sub>
+      <sub>KNN Relation-based<br/>Visual Grounding</sub>
       <br /><br />
     </td>
     <td align="center" width="25%">
