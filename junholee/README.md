@@ -150,14 +150,25 @@ where:
 | GroundingDINO + DPAA (Ours) | Backbone Frozen | 18.00 | 44.00 |
 
 ## Parameters
-Down 1×1 Conv        : 256 × 64 + 64 = 16,448
-Large DWConv 15×15   : 64 × 15 × 15 + 64 = 14,464
-Small DWConv 3×3     : 64 × 3 × 3 + 64 = 640
-Up 1×1 Conv          : 64 × 256 + 256 = 16,640
+## Parameter Efficiency
+
+Feature-DPAA is highly parameter-efficient because it uses both bottleneck projection and depthwise convolution.
+
+For each Feature-DPAA module:
+
+```text
+Down 1x1 Conv        : 256 x 64 + 64       = 16,448
+Large DWConv 15x15   : 64 x 15 x 15 + 64   = 14,464
+Small DWConv 3x3     : 64 x 3 x 3 + 64     = 640
+Up 1x1 Conv          : 64 x 256 + 256      = 16,640
 
 Total per module     : 48,192
+```
 
-Total parameter : 192,768 
+Since Feature-DPAA is inserted into four multi-scale feature levels:
+
+```text
+48,192 x 4 = 192,768 trainable parameters
 
 Feature-DPAA의 높은 파라미터 효율성은 bottleneck projection과 depthwise convolution 구조에서 비롯된다. 입력 feature의 channel dimension을 256에서 64로 축소한 뒤, large/small kernel convolution을 depthwise 방식으로 적용함으로써 large kernel을 사용하면서도 파라미터 증가를 최소화하였다. 또한 기존 Grounding DINO의 Detection Network는 모두 freeze하고, input projection 이후 4개의 multi-scale feature level에 삽입된 Feature-DPAA만 학습하였기 때문에 전체 학습 가능 파라미터는 192,768개, 전체 모델의 약 0.1114%에 불과하다.
 
