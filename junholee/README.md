@@ -12,9 +12,9 @@
 
 Feature-DPAA
 
-Bottleneck Projection
-Large-kernel Depthwise Convolution
-Small-kernel Depthwise Convolution
+Bottleneck Projection/
+Large-kernel Depthwise Convolution/
+Small-kernel Depthwise Convolution/
 Residual Feature Adaptation
 
 구조를 통해 항공 이미지의 **넓은 문맥 정보**와 **작은 객체의 세부 위치 정보**를 동시에 보강한다.
