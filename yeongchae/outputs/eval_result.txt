@@ -1,0 +1,45 @@
+Device: cuda
+Checkpoint: /data/home/jyc9117/projects/GroundingDino/aerial_rerank/outputs/aerial_reranker_best.pth
+
+================ AerialVG Zero-Shot Evaluation ================
+
+[Baseline: GroundingDINO]
+Top-1 : 12.77%
+Top-5 : 34.49%
+
+[Ours: GroundingDINO + Reranker]
+Top-1 : 15.07%
+Top-5 : 39.64%
+
+================ Best Setting ================
+mode  : score_rank_mix
+alpha : 0.02
+K     : 7
+
+================ Paper-style Table ================
+| Method | Setting | Top-1 | Top-5 |
+|---|---|---:|---:|
+| GroundingDINO | Zero-Shot | 12.77% | 34.49% |
+| GroundingDINO + Ours | Zero-Shot | 15.07% | 39.64% |
+
+================ Improvement ================
+Top-1 : 2.30%
+Top-5 : 5.15%
+===================================================
+
+================ Top 10 Settings ================
+mode=score_rank_mix, alpha=0.02, K=7 | Top-1=15.07%, Top-5=39.64%
+mode=score_rank_mix, alpha=0.02, K=None | Top-1=15.06%, Top-5=41.34%
+mode=score_rank_mix, alpha=0.02, K=5 | Top-1=15.06%, Top-5=36.24%
+mode=score_rank_mix, alpha=0.02, K=10 | Top-1=15.03%, Top-5=40.99%
+mode=score_rank_mix, alpha=0.02, K=4 | Top-1=15.01%, Top-5=36.24%
+mode=score_rank_mix, alpha=0.03, K=None | Top-1=14.94%, Top-5=41.24%
+mode=score_rank_mix, alpha=0.03, K=4 | Top-1=14.92%, Top-5=36.24%
+mode=score_rank_mix, alpha=0.05, K=4 | Top-1=14.92%, Top-5=36.24%
+mode=score_rank_mix, alpha=0.03, K=7 | Top-1=14.90%, Top-5=39.96%
+mode=score_rank_mix, alpha=0.03, K=5 | Top-1=14.90%, Top-5=36.24%
+
+Saved bar graph: /data/home/jyc9117/projects/GroundingDino/aerial_rerank/outputs/aerialvg_paper_style_bar_graph.png
+
+Saved qualitative results: 0 images
+/data/home/jyc9117/projects/GroundingDino/aerial_rerank/outputs/qualitative
