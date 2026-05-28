@@ -33,59 +33,51 @@ Large-kernel branch는 넓은 항공 이미지 문맥을 포착하고, small-ker
 
 두 branch의 출력을 합산한 뒤 GELU와 up projection을 거쳐 원래 feature에 residual 방식으로 더함으로써, 기존 Grounding DINO의 feature representation을 항공 이미지에 맞게 보강한다
 
+## Repository
+junholee/
+├── feature_dpaa_adapter.py
+├── train/
+│   └── train_aerial.py
+├── groundingdino/
+│   └── groundingdino.py
+├── validation/
+│   └── val_aerial.py
+│   └── visualize_aerial.py
+├── environment.yaml
+├── README.md
+└── requirements.txt
+
 ## Architecture
 
 Feature-DPAA Module
 
-for each projected feature level:
+Input feature x ∈ R^{B×C×H×W}
 
 │
-
 ├── (1) Down Projection
-
 │       1×1 Conv: C → C_mid
-
 │
-
 ├── (2) Dual-Path Depthwise Convolution
-
-│       ├── Large-kernel branch
-
-│       │       DWConv_large, kernel = k_L
-
-│       │       Captures broad aerial context
-
 │       │
-
+│       ├── Large-kernel branch
+│       │       DWConv_large, kernel = k_L
+│       │       Captures broad aerial context
+│       │
 │       └── Small-kernel branch
-
 │               DWConv_small, kernel = k_S
-
 │               Preserves local spatial detail
-
 │
-
 ├── (3) Dual-Path Aggregation
-
 │       z = DWConv_large(z) + DWConv_small(z)
-
 │
-
 ├── (4) Non-linearity
-
 │       z = GELU(z)
-
 │
-
 ├── (5) Up Projection
-
 │       1×1 Conv: C_mid → C
-
 │
-
 └── (6) Residual Connection
-
-y = x + scale · z
+        y = x + scale · Up(z)
 
 ## Results
 
@@ -94,7 +86,15 @@ y = x + scale · z
 | GroundingDINO | Zero-Shot | 12.77 | 34.49 |
 | GroundingDINO + DPAA (Ours) | Backbone Frozen | 18.00 | 44.00 |
 
-파라미터 수 : 192,768 개
+## Parameters
+Down 1×1 Conv        : 256 × 64 + 64 = 16,448
+Large DWConv 15×15   : 64 × 15 × 15 + 64 = 14,464
+Small DWConv 3×3     : 64 × 3 × 3 + 64 = 640
+Up 1×1 Conv          : 64 × 256 + 256 = 16,640
+
+Total per module     : 48,192
+
+Total parameter : 192,768 
 
 Feature-DPAA의 높은 파라미터 효율성은 bottleneck projection과 depthwise convolution 구조에서 비롯된다. 입력 feature의 channel dimension을 256에서 64로 축소한 뒤, large/small kernel convolution을 depthwise 방식으로 적용함으로써 large kernel을 사용하면서도 파라미터 증가를 최소화하였다. 또한 기존 Grounding DINO의 Detection Network는 모두 freeze하고, input projection 이후 4개의 multi-scale feature level에 삽입된 Feature-DPAA만 학습하였기 때문에 전체 학습 가능 파라미터는 192,768개, 전체 모델의 약 0.1114%에 불과하다.
 
@@ -102,6 +102,4 @@ Feature-DPAA의 높은 파라미터 효율성은 bottleneck projection과 depthw
 
 - GroundingDINO 공식: https://github.com/IDEA-Research/GroundingDINO
 - AerialVG 데이터셋: Aerial Visual Grounding 벤치마크
-- **Dual-Kernel Adapter: Expanding Spatial Horizons for Data-Constrained Medical Image Analysis**
-
-[Ziquan Zhu](https://arxiv.org/search/cs?searchtype=author&query=Zhu,+Z), [Hanruo Zhu](https://arxiv.org/search/cs?searchtype=author&query=Zhu,+H), [Siyuan Lu](https://arxiv.org/search/cs?searchtype=author&query=Lu,+S), [Xiang Li](https://arxiv.org/search/cs?searchtype=author&query=Li,+X), [Yanda Meng](https://arxiv.org/search/cs?searchtype=author&query=Meng,+Y), [Gaojie Jin](https://arxiv.org/search/cs?searchtype=author&query=Jin,+G), [Lu Yin](https://arxiv.org/search/cs?searchtype=author&query=Yin,+L), [Lijie Hu](https://arxiv.org/search/cs?searchtype=author&query=Hu,+L), [Di Wang](https://arxiv.org/search/cs?searchtype=author&query=Wang,+D), [Lu Liu](https://arxiv.org/search/cs?searchtype=author&query=Liu,+L), [Tianjin Huang](https://arxiv.org/search/cs?searchtype=author&query=Huang,+T)
+- **Dual-Kernel Adapter: Expanding Spatial Horizons for Data-Constrained Medical Image Analysis, Ziquan Zhu, Hanruo Zhu et al, ICLR 2026 **
