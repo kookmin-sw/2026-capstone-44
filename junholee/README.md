@@ -1,3 +1,7 @@
+# AerialVG Visual Grounding with Dual-Path Aerial Adapter (DPAA)
+
+본 연구는 항공 이미지 Visual Grounding (AerialVG) 데이터셋에서 SOTA를 능가하는 **Dual-Path Aerial Adapter(DPAA)** 을 제안합니다.
+
 ## Overview
 
 본 연구는 **드론/항공 이미지 기반 Visual Grounding의 성능 개선**을 목표로 한다.
