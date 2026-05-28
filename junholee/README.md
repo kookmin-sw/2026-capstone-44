@@ -29,7 +29,7 @@ Caption에는 left, right, near, above와 같은 공간 관계 표현이 포함�
 
 ## Method
 
-본 연구는 Grounding DINO의 **input projection 이후 생성되는 multi-scale visual feature**에 DKA 기반 **Feature-DPAA(Dual-Path Aerial Adapter)**를 삽입하여, 항공 이미지에 특화된 visual feature를 보정한다.
+본 연구는 Grounding DINO의 **input projection 이후 생성되는 multi-scale visual feature**에 DKA 기반 Feature-DPAA(Dual-Path Aerial Adapter)를 삽입하여, 항공 이미지에 특화된 visual feature를 보정한다.
 
 Feature-DPAA는 각 feature scale에 대해 입력 feature를 bottleneck projection으로 축소한 뒤, **large-kernel depthwise convolution**과 **small-kernel depthwise convolution**을 병렬로 적용한다.
 
@@ -155,9 +155,9 @@ where:
 
 ## Parameter Efficiency
 
-Feature-DPAA is highly parameter-efficient because it combines **bottleneck projection** with **depthwise convolution**.
+Feature-DPAA는 **bottleneck projection**과 **depthwise convolution**을 결합하기 때문에 매개변수 효율성이 높습니다.
 
-First, the input feature channel dimension is reduced from `C = 256` to `C_mid = 64` using a 1x1 bottleneck projection. Then, both the large-kernel and small-kernel convolutions are applied in a depthwise manner. This design allows Feature-DPAA to use a large receptive field while minimizing the number of additional trainable parameters.
+먼저, 입력 특징 채널 차원을 1x1 병목 투영을 사용하여 'C = 256'에서 'C_mid = 64'로 축소합니다. 그런 다음 대형 kernel 컨볼루션과 소형 kernel 컨볼루션을 깊이 있게 적용합니다. 이 설계를 통해 Feature-DPAA는 큰 수용 필드를 사용하면서 추가적인 학습 가능한 매개변수의 수를 최소화할 수 있습니다.
 
 ### Parameters
 
@@ -169,16 +169,10 @@ First, the input feature channel dimension is reduced from `C = 256` to `C_mid =
 | Up 1x1 Conv | `64 x 256 + 256` | 16,640 |
 | **Total per module** | - | **48,192** |
 
-Since Feature-DPAA is inserted into four multi-scale feature levels, the total number of trainable parameters is:
+Feature-DPAA는 네 가지 multi-scale feature levels에 삽입되므로, 학습 가능한 총 파라미터 수는 다음과 같습니다:
 
 **48,192 x 4 = 192,768 trainable parameters**
 
-The full model size with Feature-DPAA is summarized below.
-
-| Item | Value |
-|---|---:|
-| Total parameters | 173,032,450 |
-| Trainable parameters | 192,768 |
 
 ---
 
