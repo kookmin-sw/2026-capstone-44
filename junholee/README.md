@@ -8,7 +8,7 @@
 
 항공 이미지에서는 객체 크기가 작고 장면의 시야각이 넓어, 기존 Grounding DINO가 작은 객체의 위치 정보를 정확히 보존하면서도 넓은 spatial context를 함께 반영하는 데 한계가 존재한다.
 
-이를 해결하기 위해 Grounding DINO의 **Feature Enhancer 입력 전 multi-scale visual feature**에 적용되는 **Feature-DPAA(Dual-Path Aerial Adapter)**를 제안한다.
+이를 해결하기 위해 Grounding DINO의 **Feature Enhancer 입력 전 multi-scale visual feature**에 적용되는 Feature-DPAA(Dual-Path Aerial Adapter)를 제안한다.
 
 Feature-DPAA
 
