@@ -113,7 +113,7 @@
       <br /><br />
       <b>Research Topic</b>
       <br />
-      <sub>최정환 연구 주제<br/>(한 줄 부제)</sub>
+      <sub>Categorical Counting Module(CCM)</sub>
       <br /><br />
     </td>
     <td align="center" width="25%">
