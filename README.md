@@ -99,7 +99,7 @@
       <br /><br />
       <b>Research Topic</b>
       <br />
-      <sub>조영채 연구 주제<br/>(한 줄 부제)</sub>
+      <sub>KNN Relation-based Visual Grounding</sub>
       <br /><br />
     </td>
     <td align="center" width="25%">
