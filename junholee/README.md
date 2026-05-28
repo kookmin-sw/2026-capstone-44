@@ -33,22 +33,6 @@ Large-kernel branch는 넓은 항공 이미지 문맥을 포착하고, small-ker
 
 두 branch의 출력을 합산한 뒤 GELU와 up projection을 거쳐 원래 feature에 residual 방식으로 더함으로써, 기존 Grounding DINO의 feature representation을 항공 이미지에 맞게 보강한다
 
-## Repository
-junholee/
-├── feature_dpaa_adapter.py
-├── train/
-│   └── train_aerial.py
-├── groundingdino/
-│   └── groundingdino.py
-├── validation/
-│   └── val_aerial.py
-│   └── visualize_aerial.py
-├── environment.yaml
-├── README.md
-└── requirements.txt
-
-## Architecture
-
 ## Architecture
 
 ```text
