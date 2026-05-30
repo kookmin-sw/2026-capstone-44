@@ -2,6 +2,7 @@
 # 드론 영상 기반 Visual Grounding 성능 개선 연구
 
 ### 1. 프로젝트 소개
+capstone_poster.png
 
 #### 드론 영상 기반 Visual Grounding 성능 개선 연구 ####
 [아세아항측 공간정보/원격탐사 전문 기업, 김영욱 교수님]
